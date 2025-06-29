@@ -10,9 +10,6 @@ Implementation of a basic AWS 3-tier architecture using Terraform for infrastruc
 
 *Generated architecture diagram showing the complete AWS 3-tier infrastructure with VPC, subnets, load balancer, auto scaling group, and RDS database.*
 
-### Network Flow Details
-![architecture](./aws_architecture.png)
-
 ### Network Flow
 1. **Inbound Traffic**: Users → Internet Gateway → ALB → EC2 Instances
 2. **Database Access**: EC2 Instances → RDS (Private Communication)
