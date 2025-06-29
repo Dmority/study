@@ -82,8 +82,16 @@ module "alb_sg" {
   ingress_rules = ["http-80-tcp", "https-443-tcp"]
   ingress_cidr_blocks = ["0.0.0.0/0"]
 
-  egress_rules = ["all-all"]
-  egress_cidr_blocks = ["0.0.0.0/0"]
+  egress_with_cidr_blocks = [
+    {
+      rule        = "http-80-tcp"
+      cidr_blocks = "10.0.0.0/16"
+    },
+    {
+      rule        = "https-443-tcp"
+      cidr_blocks = "0.0.0.0/0"
+    }
+  ]
 
   tags = {
     Name = "dev-aws-study-alb-sg"
@@ -105,8 +113,16 @@ module "ec2_sg" {
     }
   ]
 
-  egress_rules = ["all-all"]
-  egress_cidr_blocks = ["0.0.0.0/0"]
+  egress_with_cidr_blocks = [
+    {
+      rule        = "https-443-tcp"
+      cidr_blocks = "0.0.0.0/0"
+    },
+    {
+      rule        = "mysql-tcp"
+      cidr_blocks = "10.0.0.0/16"
+    }
+  ]
 
   tags = {
     Name = "dev-aws-study-ec2-sg"
@@ -149,19 +165,30 @@ module "alb" {
 
   # Access logs
   access_logs = {
-    bucket  = aws_s3_bucket.alb_logs.id
+    bucket  = module.s3_bucket_alb_logs.s3_bucket_id
     enabled = true
     prefix  = "alb-logs"
   }
 
-  # Listeners
+  # Listeners - Use HTTPS with redirect from HTTP
   listeners = {
+    ex-https = {
+      port            = 443
+      protocol        = "HTTPS"
+      certificate_arn = aws_acm_certificate.main.arn
+
+      forward = {
+        target_group_key = "ex-instance"
+      }
+    }
     ex-http = {
       port     = 80
       protocol = "HTTP"
 
-      forward = {
-        target_group_key = "ex-instance"
+      redirect = {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
       }
     }
   }
@@ -193,9 +220,33 @@ module "alb" {
   }
 }
 
-# S3 bucket for ALB access logs
-resource "aws_s3_bucket" "alb_logs" {
+# S3 bucket for ALB access logs using terraform registry
+module "s3_bucket_alb_logs" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "~> 4.0"
+
   bucket = "dev-aws-study-alb-logs-${random_string.bucket_suffix.result}"
+
+  # Block all public access
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  # Enable versioning
+  versioning = {
+    enabled = true
+  }
+
+  # Server side encryption with KMS
+  server_side_encryption_configuration = {
+    rule = {
+      apply_server_side_encryption_by_default = {
+        kms_master_key_id = aws_kms_key.s3.arn
+        sse_algorithm     = "aws:kms"
+      }
+    }
+  }
 
   tags = {
     Name = "dev-aws-study-alb-logs"
@@ -208,13 +259,37 @@ resource "random_string" "bucket_suffix" {
   upper   = false
 }
 
-resource "aws_s3_bucket_public_access_block" "alb_logs" {
-  bucket = aws_s3_bucket.alb_logs.id
+# KMS key for S3 encryption
+resource "aws_kms_key" "s3" {
+  description             = "KMS key for S3 encryption"
+  deletion_window_in_days = 7
 
-  block_public_acls       = true
-  block_public_policy     = true
-  ignore_public_acls      = true
-  restrict_public_buckets = true
+  tags = {
+    Name = "dev-aws-study-s3-kms"
+  }
+}
+
+resource "aws_kms_alias" "s3" {
+  name          = "alias/dev-aws-study-s3"
+  target_key_id = aws_kms_key.s3.key_id
+}
+
+# Self-signed certificate for demo purposes
+resource "aws_acm_certificate" "main" {
+  domain_name       = "dev-aws-study.example.com"
+  validation_method = "DNS"
+
+  subject_alternative_names = [
+    "*.dev-aws-study.example.com"
+  ]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+
+  tags = {
+    Name = "dev-aws-study-cert"
+  }
 }
 
 # Auto Scaling Group
@@ -238,6 +313,14 @@ module "asg" {
   image_id      = data.aws_ami.amazon_linux.id
   instance_type = "t3.micro"
   security_groups = [module.ec2_sg.security_group_id]
+
+  # Enable IMDSv2
+  metadata_options = {
+    http_endpoint               = "enabled"
+    http_tokens                 = "required"
+    http_put_response_hop_limit = 1
+    instance_metadata_tags      = "enabled"
+  }
 
   user_data = base64encode(file("${path.module}/../../scripts/user-data.sh"))
 
@@ -295,6 +378,7 @@ module "rds" {
 
   # DB parameter group
   family = "mysql8.0"
+  major_engine_version = "8.0"
 
   # Encryption
   storage_encrypted = true
@@ -302,9 +386,9 @@ module "rds" {
   # Multi-AZ
   multi_az = true
 
-  # Snapshot identifier
-  final_snapshot_identifier = "dev-aws-study-rds-final-snapshot"
-  skip_final_snapshot       = false
+  # Snapshot configuration
+  final_snapshot_identifier_prefix = "dev-aws-study-rds"
+  skip_final_snapshot              = false
 
   tags = {
     Name = "dev-aws-study-rds"

@@ -166,3 +166,22 @@ Thumbs.db
 # Generated diagrams
 docs/aws_architecture.png
 docs/aws_architecture
+
+# Security scan results
+*.sarif
+trivy-*.json
+trivy-*.xml
+SECURITY_SCAN_RESULTS.md
+
+# Trivy cache
+.trivy/
+
+# Local tools
+.local/
+
+# Certificates and keys
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
