@@ -5,70 +5,13 @@ Implementation of a basic AWS 3-tier architecture using Terraform for infrastruc
 
 ## Architecture Diagram
 
-```
-                                    ┌─────────────────┐
-                                    │      Users      │
-                                    └─────────┬───────┘
-                                              │ HTTPS/HTTP
-                                              ▼
-                            ┌─────────────────────────────────────┐
-                            │              AWS Cloud              │
-                            │  ┌─────────────────────────────────┐│
-                            │  │      VPC (10.0.0.0/16)         ││
-                            │  │                                 ││
-                            │  │  ┌─────────────────────────────┐││
-                            │  │  │      Internet Gateway      │││
-                            │  │  └─────────────┬───────────────┘││
-                            │  │                │                ││
-                            │  │ ┌──────────────▼──────────────┐ ││
-                            │  │ │  Application Load Balancer  │ ││
-                            │  │ │    (Public Subnets)         │ ││
-                            │  │ │  AZ-A: 10.0.1.0/24          │ ││
-                            │  │ │  AZ-B: 10.0.2.0/24          │ ││
-                            │  │ └──────────────┬──────────────┘ ││
-                            │  │                │                ││
-                            │  │       ┌────────┴────────┐       ││
-                            │  │       │                 │       ││
-                            │  │ ┌─────▼──────┐   ┌─────▼──────┐││
-                            │  │ │EC2 Instance│   │EC2 Instance│││
-                            │  │ │     A      │   │     B      │││
-                            │  │ │Private     │   │Private     │││
-                            │  │ │Subnet A    │   │Subnet B    │││
-                            │  │ │10.0.10.0/24│   │10.0.11.0/24│││
-                            │  │ └─────┬──────┘   └─────┬──────┘││
-                            │  │       │                 │       ││
-                            │  │       └────────┬────────┘       ││
-                            │  │                │                ││
-                            │  │ ┌──────────────▼──────────────┐ ││
-                            │  │ │        RDS Database         │ ││
-                            │  │ │       (Multi-AZ)            │ ││
-                            │  │ │  DB Subnet A: 10.0.20.0/24  │ ││
-                            │  │ │  DB Subnet B: 10.0.21.0/24  │ ││
-                            │  │ └─────────────────────────────┘ ││
-                            │  │                                 ││
-                            │  │ ┌─────────────────────────────┐ ││
-                            │  │ │      NAT Gateways           │ ││
-                            │  │ │   (For outbound traffic)    │ ││
-                            │  │ └─────────────────────────────┘ ││
-                            │  └─────────────────────────────────┘│
-                            └─────────────────────────────────────┘
+### Visual Architecture Diagram
+![AWS 3-Tier Architecture](aws_architecture.png)
 
-                            ┌─────────────────────────────────────┐
-                            │         Security Groups             │
-                            │                                     │
-                            │  ALB SG: Port 80,443 from 0.0.0.0/0│
-                            │  EC2 SG: Port 80 from ALB SG only   │
-                            │  RDS SG: Port 3306 from EC2 SG only │
-                            └─────────────────────────────────────┘
+*Generated architecture diagram showing the complete AWS 3-tier infrastructure with VPC, subnets, load balancer, auto scaling group, and RDS database.*
 
-                            ┌─────────────────────────────────────┐
-                            │          Monitoring                 │
-                            │                                     │
-                            │  CloudWatch: Metrics + Alarms      │
-                            │  SNS: Security Alert Notifications  │
-                            │  GuardDuty: Threat Detection        │
-                            └─────────────────────────────────────┘
-```
+### Network Flow Details
+![architecture](./aws_architecture.png)
 
 ### Network Flow
 1. **Inbound Traffic**: Users → Internet Gateway → ALB → EC2 Instances

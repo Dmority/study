@@ -163,10 +163,6 @@ aws-exports.js
 ehthumbs.db
 Thumbs.db
 
-# Generated diagrams
-docs/aws_architecture.png
-docs/aws_architecture
-
 # Security scan results
 *.sarif
 trivy-*.json
