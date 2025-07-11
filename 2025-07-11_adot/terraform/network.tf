@@ -11,15 +11,18 @@ module "vpc" {
   name = local.vpc_name
   cidr = var.vpc_cidr
 
-  azs             = local.azs
-  public_subnets  = local.public_subnet_cidrs
-  private_subnets = local.private_subnet_cidrs
+  azs              = local.azs
+  public_subnets   = local.public_subnet_cidrs
+  private_subnets  = local.private_subnet_cidrs
+  database_subnets = local.database_subnet_cidrs
 
   enable_nat_gateway     = true
   single_nat_gateway     = true  # Cost optimization - single NAT gateway
   enable_vpn_gateway     = false
   enable_dns_hostnames   = true
   enable_dns_support     = true
+  
+  create_database_subnet_group = true
 
 }
 

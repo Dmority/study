@@ -4,8 +4,9 @@ locals {
   azs = slice(data.aws_availability_zones.available.names, 0, 2)
   
   # Subnet CIDR blocks
-  public_subnet_cidrs  = [cidrsubnet(var.vpc_cidr, 8, 1), cidrsubnet(var.vpc_cidr, 8, 2)]
-  private_subnet_cidrs = [cidrsubnet(var.vpc_cidr, 8, 3), cidrsubnet(var.vpc_cidr, 8, 4)]
+  public_subnet_cidrs   = [cidrsubnet(var.vpc_cidr, 8, 1), cidrsubnet(var.vpc_cidr, 8, 2)]
+  private_subnet_cidrs  = [cidrsubnet(var.vpc_cidr, 8, 3), cidrsubnet(var.vpc_cidr, 8, 4)]
+  database_subnet_cidrs = [cidrsubnet(var.vpc_cidr, 8, 5), cidrsubnet(var.vpc_cidr, 8, 6)]
   
   # Resource naming
   vpc_name           = "${var.project_name}-vpc"
