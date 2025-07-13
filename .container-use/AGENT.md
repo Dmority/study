@@ -1,1 +1,1 @@
-This environment is set up for Flask development. Python 3.11, pip, and Flask are available. Use 'python app.py' to run the Flask application.
+This environment is set up for Next.js development. Node.js 20, npm are available. Use 'npm run dev' to start the development server after creating the Next.js app.

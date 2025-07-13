@@ -1,9 +1,5 @@
 {
   "workdir": "/workdir",
-  "base_image": "python:3.11-slim",
-  "setup_commands": [
-    "pip install --upgrade pip",
-    "pip install flask"
-  ],
+  "base_image": "node:20-alpine",
   "Locked": false
 }
