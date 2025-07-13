@@ -1,1 +1,1 @@
-This environment is set up for FastAPI development. Python 3 and pip are available for installing dependencies. Use 'python main.py' to run the FastAPI application with uvicorn.
+This environment is set up for Flask development. Python 3.11, pip, and Flask are available. Use 'python app.py' to run the Flask application.
