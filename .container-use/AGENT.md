@@ -1,1 +1,1 @@
-No instructions found. Please look around the filesystem and update me
+This environment is set up for FastAPI development. Python 3 and pip are available for installing dependencies. Use 'python main.py' to run the FastAPI application with uvicorn.

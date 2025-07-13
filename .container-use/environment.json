@@ -1,5 +1,8 @@
 {
   "workdir": "/workdir",
-  "base_image": "ubuntu:24.04",
+  "base_image": "python:3.11-slim",
+  "setup_commands": [
+    "pip install --upgrade pip"
+  ],
   "Locked": false
 }
