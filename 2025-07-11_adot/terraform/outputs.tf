@@ -43,9 +43,9 @@ output "frontend_target_group_arn" {
   value       = aws_lb_target_group.frontend.arn
 }
 
-output "backend_target_group_arn" {
-  description = "Backend target group ARN"
-  value       = aws_lb_target_group.backend.arn
+output "backend_service_discovery_arn" {
+  description = "Backend service discovery ARN"
+  value       = aws_service_discovery_service.backend.arn
 }
 
 output "ecs_cluster_id" {

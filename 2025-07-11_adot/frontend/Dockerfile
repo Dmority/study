@@ -48,6 +48,9 @@ COPY --from=builder /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 
+# Copy full node_modules for ADOT auto-instrumentation support
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules ./node_modules
+
 # Security: Remove unnecessary packages and update system
 RUN apk update && apk upgrade && apk add --no-cache dumb-init
 RUN rm -rf /var/cache/apk/*

@@ -54,7 +54,7 @@ class Settings(BaseSettings):
         
         # Development fallback to SQLite
         logger.info("Using SQLite database for development")
-        return "sqlite+aiosqlite:///./todos.db"
+        return "sqlite+aiosqlite:////tmp/todos.db"
 
 
 settings = Settings()

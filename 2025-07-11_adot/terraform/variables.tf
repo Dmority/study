@@ -46,11 +46,6 @@ variable "backend_image_tag" {
   default     = "latest"
 }
 
-variable "adot_image" {
-  description = "ADOT collector image"
-  type        = string
-  default     = "public.ecr.aws/aws-observability/aws-otel-collector:latest"
-}
 
 variable "frontend_cpu" {
   description = "CPU units for frontend task"
@@ -111,4 +106,5 @@ variable "aurora_max_capacity" {
   type        = number
   default     = 1.0
 }
+
 

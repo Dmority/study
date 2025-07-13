@@ -48,6 +48,7 @@ resource "aws_security_group" "alb" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
+
   egress {
     from_port   = 0
     to_port     = 0
@@ -122,19 +123,8 @@ module "alb" {
   subnets            = module.vpc.public_subnets
   security_groups    = [aws_security_group.alb.id]
 
-  # HTTP to HTTPS redirect
-  listeners = {
-    http-https-redirect = {
-      port     = 80
-      protocol = "HTTP"
-      redirect = {
-        port        = "443"
-        protocol    = "HTTPS"
-        status_code = "HTTP_301"
-      }
-    }
-  }
-
+  # No listeners in module - create separately
+  listeners = {}
   target_groups = {}
 
 }
@@ -153,7 +143,7 @@ resource "aws_lb_target_group" "frontend" {
     unhealthy_threshold = 2
     timeout             = 5
     interval            = 30
-    path                = "/health"
+    path                = "/"
     matcher             = "200"
     port                = "traffic-port"
     protocol            = "HTTP"
@@ -164,26 +154,16 @@ resource "aws_lb_target_group" "frontend" {
   }
 }
 
-resource "aws_lb_target_group" "backend" {
-  name     = local.backend_tg_name
-  port     = 8000
-  protocol = "HTTP"
-  vpc_id   = module.vpc.vpc_id
-  target_type = "ip"
-  
-  health_check {
-    enabled             = true
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-    timeout             = 5
-    interval            = 30
-    path                = "/health"
-    matcher             = "200"
-    port                = "traffic-port"
-    protocol            = "HTTP"
-  }
 
-  tags = {
-    Name = local.backend_tg_name
+# Create HTTP listener for frontend
+resource "aws_lb_listener" "frontend" {
+  load_balancer_arn = module.alb.arn
+  port              = "80"
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.frontend.arn
   }
 }
+
