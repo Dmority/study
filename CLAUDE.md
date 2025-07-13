@@ -11,3 +11,6 @@ This is a study repository containing various directories with different coding 
 ## Notes
 - This is a learning and experimentation repository
 - Check individual directory CLAUDE.md files for project-specific information
+
+## Memories
+- Added a memory to track repository details
