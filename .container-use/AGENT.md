@@ -1,1 +1,1 @@
-This environment is set up for Next.js development. Node.js 20, npm are available. Use 'npm run dev' to start the development server after creating the Next.js app.
+This environment is set up for Streamlit development. Python 3.11 and Streamlit are available. Use 'streamlit run app.py' to start the Streamlit application.
