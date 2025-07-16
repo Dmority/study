@@ -1,0 +1,1 @@
+This environment is set up for Streamlit development. Python 3.11 and Streamlit are available. Use 'streamlit run app.py' to start the Streamlit application.
