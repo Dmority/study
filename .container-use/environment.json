@@ -1,0 +1,8 @@
+{
+  "workdir": "/workdir",
+  "base_image": "python:3.11-slim",
+  "setup_commands": [
+    "pip install streamlit"
+  ],
+  "Locked": false
+}
