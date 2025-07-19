@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Sign-Up</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .result { margin: 10px 0; padding: 10px; border: 1px solid #ccc; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e8; color: #2e7d32; }
+        .warning { background: #fff3e0; color: #f57c00; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+        button { padding: 10px 20px; margin: 5px; }
+    </style>
+</head>
+<body>
+    <h1>Sign-Up Test</h1>
+    
+    <div id="status">Testing...</div>
+    
+    <button onclick="testSignUp()">Test Sign-Up</button>
+    <button onclick="testExistingUser()">Test Existing User Login</button>
+    
+    <div id="results"></div>
+
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <script>
+        // Configuration
+        const AWS_CONFIG = {
+            region: 'us-east-1',
+            userPoolId: 'us-east-1_yNgvsE3q1',
+            userPoolClientId: '68ur269ci0dngnqdugat7tfqsn'
+        };
+        
+        function debugLog(message, data = null) {
+            console.log(`[Test] ${message}`, data || '');
+        }
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `result ${type}`;
+            div.innerHTML = `<strong>${new Date().toLocaleTimeString()}</strong>: ${message}`;
+            results.appendChild(div);
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').textContent = message;
+        }
+        
+        async function testSignUp() {
+            updateStatus('Testing sign-up...');
+            addResult('Starting sign-up test...');
+            
+            try {
+                // Initialize Cognito
+                const poolData = {
+                    UserPoolId: AWS_CONFIG.userPoolId,
+                    ClientId: AWS_CONFIG.userPoolClientId
+                };
+                
+                const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+                addResult('✓ Cognito User Pool initialized', 'success');
+                
+                // Test email
+                const testEmail = 'test+' + Date.now() + '@example.com';
+                const testPassword = 'TestPassword123!';
+                
+                addResult(`Testing with email: ${testEmail}`, 'info');
+                
+                // Create user attributes
+                const attributeList = [
+                    new AmazonCognitoIdentity.CognitoUserAttribute({
+                        Name: 'email',
+                        Value: testEmail
+                    })
+                ];
+                
+                // Attempt sign-up
+                const signUpResult = await new Promise((resolve, reject) => {
+                    userPool.signUp(testEmail, testPassword, attributeList, null, (err, result) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(result);
+                        }
+                    });
+                });
+                
+                addResult(`✓ Sign-up successful! User: ${signUpResult.user.getUsername()}`, 'success');
+                addResult(`User confirmed: ${signUpResult.userConfirmed}`, 'info');
+                
+                if (!signUpResult.userConfirmed) {
+                    addResult('📧 User needs email verification', 'warning');
+                }
+                
+                updateStatus('Sign-up test completed successfully!');
+                
+            } catch (error) {
+                addResult(`✗ Sign-up failed: ${error.message}`, 'error');
+                addResult(`Error code: ${error.code}`, 'error');
+                updateStatus('Sign-up test failed');
+                console.error('Sign-up error:', error);
+            }
+        }
+        
+        async function testExistingUser() {
+            updateStatus('Testing existing user login...');
+            addResult('Testing login with existing user...');
+            
+            try {
+                // Initialize Cognito
+                const poolData = {
+                    UserPoolId: AWS_CONFIG.userPoolId,
+                    ClientId: AWS_CONFIG.userPoolClientId
+                };
+                
+                const userPool = new AmazonCognitoIdentity.CognitoUserPool(poolData);
+                
+                // Test with existing user
+                const testEmail = 'test@example.com';
+                const testPassword = 'TestPassword123!';
+                
+                addResult(`Testing login with: ${testEmail}`, 'info');
+                
+                const userData = {
+                    Username: testEmail,
+                    Pool: userPool
+                };
+                
+                const cognitoUser = new AmazonCognitoIdentity.CognitoUser(userData);
+                
+                const authenticationDetails = new AmazonCognitoIdentity.AuthenticationDetails({
+                    Username: testEmail,
+                    Password: testPassword
+                });
+                
+                const loginResult = await new Promise((resolve, reject) => {
+                    cognitoUser.authenticateUser(authenticationDetails, {
+                        onSuccess: (result) => {
+                            resolve(result);
+                        },
+                        onFailure: (err) => {
+                            reject(err);
+                        },
+                        newPasswordRequired: (userAttributes, requiredAttributes) => {
+                            addResult('🔐 New password required (first login)', 'warning');
+                            reject(new Error('New password required'));
+                        }
+                    });
+                });
+                
+                addResult('✓ Login successful!', 'success');
+                addResult(`Access token: ${loginResult.getAccessToken().getJwtToken().substring(0, 50)}...`, 'info');
+                updateStatus('Login test completed successfully!');
+                
+            } catch (error) {
+                addResult(`✗ Login failed: ${error.message}`, 'error');
+                addResult(`Error code: ${error.code}`, 'error');
+                updateStatus('Login test failed');
+                console.error('Login error:', error);
+            }
+        }
+        
+        // Auto-run basic test
+        window.addEventListener('load', () => {
+            addResult('Page loaded, ready for testing');
+            updateStatus('Ready for testing');
+        });
+    </script>
+</body>
+</html>

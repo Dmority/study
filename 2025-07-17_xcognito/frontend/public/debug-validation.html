@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Validation</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Debug Validation Test</h2>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="test@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" value="TestPassword123!" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" value="TestPassword123!" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Test Validation</button>
+        </form>
+        
+        <div id="output" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f5f5f5;">
+            <h3>Debug Output:</h3>
+            <pre id="debugOutput"></pre>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <script src="src/js/config.js"></script>
+    <script src="src/js/ui.js"></script>
+    
+    <script>
+        const output = document.getElementById('debugOutput');
+        
+        function log(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] ${message}`;
+            if (data) {
+                output.textContent += logEntry + '\n' + JSON.stringify(data, null, 2) + '\n\n';
+            } else {
+                output.textContent += logEntry + '\n\n';
+            }
+            console.log(logEntry, data);
+        }
+        
+        // Test validation rules
+        log('VALIDATION_RULES:', typeof VALIDATION_RULES !== 'undefined' ? VALIDATION_RULES : 'undefined');
+        
+        // Test UI Helper
+        log('UIHelper available:', typeof UIHelper !== 'undefined');
+        log('uiHelper instance:', typeof uiHelper !== 'undefined');
+        
+        document.getElementById('testForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            const formData = new FormData(form);
+            
+            log('Form data:', Object.fromEntries(formData));
+            
+            // Test if UIHelper is available
+            if (typeof uiHelper === 'undefined') {
+                log('ERROR: uiHelper is not available');
+                return;
+            }
+            
+            // Test if validation rules are available
+            if (typeof VALIDATION_RULES === 'undefined') {
+                log('ERROR: VALIDATION_RULES is not available');
+                return;
+            }
+            
+            if (!VALIDATION_RULES.signup) {
+                log('ERROR: VALIDATION_RULES.signup is not available');
+                return;
+            }
+            
+            log('Signup validation rules:', VALIDATION_RULES.signup);
+            
+            // Test validation
+            try {
+                const validation = uiHelper.validateForm(form, VALIDATION_RULES.signup);
+                log('Validation result:', validation);
+                
+                if (!validation.isValid) {
+                    log('Validation errors:', validation.errors);
+                    
+                    // Test error display
+                    validation.errors.forEach(error => {
+                        log('Processing error:', error);
+                        if (typeof error === 'object' && error.fieldName && error.message) {
+                            log('Field error:', `${error.fieldName}: ${error.message}`);
+                        } else {
+                            log('String error:', error);
+                        }
+                    });
+                } else {
+                    log('Validation passed!');
+                }
+            } catch (error) {
+                log('Validation exception:', error.message);
+                log('Stack trace:', error.stack);
+            }
+        });
+    </script>
+</body>
+</html>

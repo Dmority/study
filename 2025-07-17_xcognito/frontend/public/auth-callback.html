@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Authentication Callback</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f5f5f5;
+        }
+        .container {
+            text-align: center;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .loading {
+            font-size: 18px;
+            color: #666;
+        }
+        .success {
+            color: #4CAF50;
+        }
+        .error {
+            color: #f44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="status" class="loading">Processing authentication...</div>
+        <div id="details" style="margin-top: 10px; font-size: 14px; color: #999;"></div>
+    </div>
+
+    <script>
+        function updateStatus(message, type = 'loading') {
+            const statusEl = document.getElementById('status');
+            statusEl.textContent = message;
+            statusEl.className = type;
+        }
+
+        function updateDetails(message) {
+            document.getElementById('details').textContent = message;
+        }
+
+        try {
+            // URLからパラメータを取得
+            const urlParams = new URLSearchParams(window.location.search);
+            const code = urlParams.get('code');
+            const error = urlParams.get('error');
+            const state = urlParams.get('state');
+
+            if (error) {
+                updateStatus('Authentication failed', 'error');
+                updateDetails(`Error: ${error}`);
+                
+                // 3秒後にウィンドウを閉じる
+                setTimeout(() => {
+                    window.close();
+                }, 3000);
+                
+            } else if (code) {
+                updateStatus('Authentication successful!', 'success');
+                updateDetails('You can close this window now.');
+                
+                // 親ウィンドウがこのURLを監視している
+                // 1秒後にウィンドウを閉じる
+                setTimeout(() => {
+                    window.close();
+                }, 1000);
+                
+            } else {
+                updateStatus('No authorization code received', 'error');
+                updateDetails('Please try again.');
+                
+                setTimeout(() => {
+                    window.close();
+                }, 3000);
+            }
+        } catch (e) {
+            updateStatus('Error processing authentication', 'error');
+            updateDetails(e.message);
+            
+            setTimeout(() => {
+                window.close();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

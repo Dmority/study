@@ -1,0 +1,17 @@
+{
+  "httpMethod": "GET",
+  "path": "/emotion",
+  "headers": {
+    "Authorization": "Bearer test-token"
+  },
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-id",
+        "email": "test@example.com"
+      }
+    }
+  },
+  "body": null,
+  "isBase64Encoded": false
+}

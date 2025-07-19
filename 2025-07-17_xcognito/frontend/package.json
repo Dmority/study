@@ -1,0 +1,27 @@
+{
+  "name": "todo-app-frontend",
+  "version": "1.0.0",
+  "description": "Frontend for serverless todo management application",
+  "main": "index.js",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .js",
+    "lint:fix": "eslint src --ext .js --fix"
+  },
+  "keywords": ["todo", "aws", "serverless", "cognito", "frontend"],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^4.4.0",
+    "eslint": "^8.45.0",
+    "@eslint/js": "^8.45.0"
+  },
+  "dependencies": {
+    "amazon-cognito-identity-js": "^6.3.6"
+  }
+}

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Todo Issue</title>
+</head>
+<body>
+    <h1>Debug Todo Creation Issue</h1>
+    
+    <div id="debug-info">
+        <h2>Debug Information</h2>
+        <div id="auth-status">Checking auth status...</div>
+        <div id="token-info">Checking token...</div>
+        <div id="api-config">Checking API config...</div>
+    </div>
+    
+    <div id="test-controls">
+        <h2>Test Controls</h2>
+        <button id="test-auth" onclick="testAuth()">Test Authentication</button>
+        <button id="test-api" onclick="testApiCall()">Test API Call</button>
+        <button id="test-todo-create" onclick="testTodoCreate()">Test Todo Creation</button>
+    </div>
+    
+    <div id="results">
+        <h2>Results</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <script src="src/js/config.js"></script>
+    <script src="src/js/auth.js"></script>
+    <script src="src/js/api.js"></script>
+    
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toISOString() + ': ' + message + '\n';
+            console.log(message);
+        }
+        
+        function updateStatus(elementId, message) {
+            document.getElementById(elementId).textContent = message;
+        }
+        
+        async function checkInitialStatus() {
+            log('=== Initial Status Check ===');
+            
+            // Check config
+            if (typeof AWS_CONFIG !== 'undefined') {
+                updateStatus('api-config', `API Endpoint: ${AWS_CONFIG.apiEndpoint}`);
+                log(`API Config loaded: ${AWS_CONFIG.apiEndpoint}`);
+            } else {
+                updateStatus('api-config', 'ERROR: AWS_CONFIG not loaded');
+                log('ERROR: AWS_CONFIG not loaded');
+            }
+            
+            // Check auth service
+            if (typeof authService !== 'undefined') {
+                try {
+                    const isAuth = await authService.isAuthenticated();
+                    updateStatus('auth-status', `Authenticated: ${isAuth}`);
+                    log(`Authentication status: ${isAuth}`);
+                    
+                    if (isAuth) {
+                        const token = authService.getAccessToken();
+                        updateStatus('token-info', token ? 'Token present' : 'No token');
+                        log(`Token available: ${token ? 'YES' : 'NO'}`);
+                        if (token) {
+                            log(`Token preview: ${token.substring(0, 20)}...`);
+                        }
+                    }
+                } catch (error) {
+                    updateStatus('auth-status', `Error: ${error.message}`);
+                    log(`Auth check error: ${error.message}`);
+                }
+            } else {
+                updateStatus('auth-status', 'ERROR: authService not loaded');
+                log('ERROR: authService not loaded');
+            }
+        }
+        
+        async function testAuth() {
+            log('=== Testing Authentication ===');
+            try {
+                const isAuth = await authService.isAuthenticated();
+                log(`Is authenticated: ${isAuth}`);
+                
+                if (isAuth) {
+                    const session = await authService.getCurrentSession();
+                    log(`Session valid: ${session.isValid()}`);
+                    
+                    const token = authService.getAccessToken();
+                    log(`Access token available: ${token ? 'YES' : 'NO'}`);
+                    
+                    const attributes = await authService.getUserAttributes();
+                    log(`User email: ${attributes.email}`);
+                } else {
+                    log('User not authenticated - please login first');
+                }
+            } catch (error) {
+                log(`Auth test error: ${error.message}`);
+            }
+        }
+        
+        async function testApiCall() {
+            log('=== Testing API Connection ===');
+            try {
+                const response = await fetch(AWS_CONFIG.apiEndpoint + '/todos', {
+                    method: 'OPTIONS',
+                    headers: {
+                        'Access-Control-Request-Method': 'POST',
+                        'Access-Control-Request-Headers': 'Content-Type,Authorization'
+                    }
+                });
+                
+                log(`OPTIONS request status: ${response.status}`);
+                log(`Response headers: ${JSON.stringify(Object.fromEntries(response.headers))}`);
+                
+            } catch (error) {
+                log(`API connection test error: ${error.message}`);
+            }
+        }
+        
+        async function testTodoCreate() {
+            log('=== Testing Todo Creation ===');
+            try {
+                const isAuth = await authService.isAuthenticated();
+                if (!isAuth) {
+                    log('ERROR: Not authenticated - cannot test todo creation');
+                    return;
+                }
+                
+                const token = authService.getAccessToken();
+                if (!token) {
+                    log('ERROR: No access token available');
+                    return;
+                }
+                
+                log('Attempting to create todo...');
+                
+                const todoData = {
+                    title: 'Debug Test Todo',
+                    description: 'Testing todo creation',
+                    dueDate: null
+                };
+                
+                log(`Sending request to: ${AWS_CONFIG.apiEndpoint}/todos`);
+                log(`Request data: ${JSON.stringify(todoData)}`);
+                log(`Token preview: ${token.substring(0, 20)}...`);
+                
+                const response = await fetch(AWS_CONFIG.apiEndpoint + '/todos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(todoData)
+                });
+                
+                log(`Response status: ${response.status}`);
+                log(`Response status text: ${response.statusText}`);
+                
+                const responseData = await response.text();
+                log(`Response data: ${responseData}`);
+                
+                if (response.ok) {
+                    log('SUCCESS: Todo created successfully!');
+                } else {
+                    log(`FAILED: ${response.status} - ${responseData}`);
+                }
+                
+            } catch (error) {
+                log(`Todo creation test error: ${error.message}`);
+                log(`Error details: ${error.stack}`);
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            setTimeout(checkInitialStatus, 1000); // Wait for scripts to load
+        });
+    </script>
+</body>
+</html>

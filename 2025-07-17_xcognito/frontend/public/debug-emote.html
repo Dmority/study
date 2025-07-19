@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Emote Issues</title>
+</head>
+<body>
+    <h1>Debug Emote Functionality</h1>
+    
+    <div id="debug-info">
+        <h2>Current Status</h2>
+        <div id="auth-status">Checking auth status...</div>
+        <div id="token-info">Checking tokens...</div>
+        <div id="emote-config">Checking emote config...</div>
+        <div id="emote-client-status">Checking emote client...</div>
+    </div>
+    
+    <div id="test-controls">
+        <h2>Test Controls</h2>
+        <button onclick="testAuth()">1. Test Authentication</button>
+        <button onclick="testEmoteConfig()">2. Test Emote Config</button>
+        <button onclick="testEmoteClient()">3. Test Emote Client Setup</button>
+        <button onclick="testEmoteApi()">4. Test Emote API Direct</button>
+        <button onclick="testEmoteViaClient()">5. Test Emote via Client</button>
+    </div>
+    
+    <div id="results">
+        <h2>Results</h2>
+        <pre id="output"></pre>
+    </div>
+
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <script src="src/js/config.js"></script>
+    <script src="src/js/auth.js"></script>
+    <script src="src/js/api.js"></script>
+    
+    <script>
+        function log(message) {
+            const output = document.getElementById('output');
+            output.textContent += new Date().toISOString() + ': ' + message + '\n';
+            console.log(message);
+        }
+        
+        function updateStatus(elementId, message) {
+            document.getElementById(elementId).textContent = message;
+        }
+        
+        async function checkInitialStatus() {
+            log('=== Emote Debug Status Check ===');
+            
+            // Check emote config
+            if (typeof EMOTE_CONFIG !== 'undefined') {
+                updateStatus('emote-config', `Emote API: ${EMOTE_CONFIG.apiEndpoint}`);
+                log(`Emote Config loaded: ${EMOTE_CONFIG.apiEndpoint}`);
+            } else {
+                updateStatus('emote-config', 'ERROR: EMOTE_CONFIG not loaded');
+                log('ERROR: EMOTE_CONFIG not loaded');
+            }
+            
+            // Check emote client
+            if (typeof emoteApiClient !== 'undefined') {
+                updateStatus('emote-client-status', 'Emote client available');
+                log('Emote API client is available');
+                log(`Emote client base URL: ${emoteApiClient.baseUrl}`);
+                log(`Emote client has token: ${emoteApiClient.authToken ? 'YES' : 'NO'}`);
+            } else {
+                updateStatus('emote-client-status', 'ERROR: emoteApiClient not loaded');
+                log('ERROR: emoteApiClient not loaded');
+            }
+            
+            // Check auth
+            if (typeof authService !== 'undefined') {
+                try {
+                    const isAuth = await authService.isAuthenticated();
+                    updateStatus('auth-status', `Authenticated: ${isAuth}`);
+                    log(`Authentication status: ${isAuth}`);
+                    
+                    if (isAuth) {
+                        const accessToken = authService.getAccessToken();
+                        const session = await authService.getCurrentSession();
+                        const idToken = session.getIdToken().getJwtToken();
+                        
+                        updateStatus('token-info', 'Both tokens available');
+                        log(`Access token available: ${accessToken ? 'YES' : 'NO'}`);
+                        log(`ID token available: ${idToken ? 'YES' : 'NO'}`);
+                        
+                        if (accessToken) log(`Access token preview: ${accessToken.substring(0, 30)}...`);
+                        if (idToken) log(`ID token preview: ${idToken.substring(0, 30)}...`);
+                    }
+                } catch (error) {
+                    updateStatus('auth-status', `Error: ${error.message}`);
+                    log(`Auth check error: ${error.message}`);
+                }
+            }
+        }
+        
+        async function testAuth() {
+            log('=== Testing Authentication for Emote ===');
+            try {
+                const isAuth = await authService.isAuthenticated();
+                log(`Is authenticated: ${isAuth}`);
+                
+                if (!isAuth) {
+                    log('ERROR: Not authenticated - please login first');
+                    return;
+                }
+                
+                const session = await authService.getCurrentSession();
+                log(`Session valid: ${session.isValid()}`);
+                
+                const accessToken = authService.getAccessToken();
+                const idToken = session.getIdToken().getJwtToken();
+                
+                log(`Access token available: ${accessToken ? 'YES' : 'NO'}`);
+                log(`ID token available: ${idToken ? 'YES' : 'NO'}`);
+                
+                // Test which token type works
+                log('Testing access token format...');
+                if (accessToken) {
+                    try {
+                        const payload = JSON.parse(atob(accessToken.split('.')[1]));
+                        log(`Access token issuer: ${payload.iss}`);
+                        log(`Access token audience: ${payload.aud}`);
+                        log(`Access token token_use: ${payload.token_use}`);
+                    } catch (e) {
+                        log(`Access token decode error: ${e.message}`);
+                    }
+                }
+                
+                log('Testing ID token format...');
+                if (idToken) {
+                    try {
+                        const payload = JSON.parse(atob(idToken.split('.')[1]));
+                        log(`ID token issuer: ${payload.iss}`);
+                        log(`ID token audience: ${payload.aud}`);
+                        log(`ID token token_use: ${payload.token_use}`);
+                    } catch (e) {
+                        log(`ID token decode error: ${e.message}`);
+                    }
+                }
+                
+            } catch (error) {
+                log(`Auth test error: ${error.message}`);
+            }
+        }
+        
+        async function testEmoteConfig() {
+            log('=== Testing Emote Configuration ===');
+            log(`Emote API endpoint: ${EMOTE_CONFIG.apiEndpoint}`);
+            log(`Todo API endpoint: ${AWS_CONFIG.apiEndpoint}`);
+            log(`Endpoints are different: ${EMOTE_CONFIG.apiEndpoint !== AWS_CONFIG.apiEndpoint}`);
+            
+            // Test if emote endpoint is reachable
+            try {
+                const response = await fetch(EMOTE_CONFIG.apiEndpoint + '/emotions', {
+                    method: 'OPTIONS'
+                });
+                log(`Emote endpoint OPTIONS response: ${response.status}`);
+            } catch (error) {
+                log(`Emote endpoint test error: ${error.message}`);
+            }
+        }
+        
+        async function testEmoteClient() {
+            log('=== Testing Emote Client Setup ===');
+            
+            if (!emoteApiClient) {
+                log('ERROR: emoteApiClient not available');
+                return;
+            }
+            
+            log(`Emote client base URL: ${emoteApiClient.baseUrl}`);
+            log(`Emote client current token: ${emoteApiClient.authToken ? 'SET' : 'NOT SET'}`);
+            
+            // Check if auth service is setting up the emote client
+            try {
+                const isAuth = await authService.isAuthenticated();
+                if (isAuth) {
+                    const accessToken = authService.getAccessToken();
+                    log(`AuthService access token: ${accessToken ? 'AVAILABLE' : 'NOT AVAILABLE'}`);
+                    
+                    // Manually set token and test
+                    if (accessToken) {
+                        emoteApiClient.setAuthToken(accessToken);
+                        log('Manually set access token on emote client');
+                        log(`Emote client token now: ${emoteApiClient.authToken ? 'SET' : 'STILL NOT SET'}`);
+                    }
+                }
+            } catch (error) {
+                log(`Emote client setup error: ${error.message}`);
+            }
+        }
+        
+        async function testEmoteApi() {
+            log('=== Testing Emote API Direct ===');
+            
+            try {
+                const isAuth = await authService.isAuthenticated();
+                if (!isAuth) {
+                    log('ERROR: Not authenticated');
+                    return;
+                }
+                
+                const accessToken = authService.getAccessToken();
+                const session = await authService.getCurrentSession();
+                const idToken = session.getIdToken().getJwtToken();
+                
+                // Test with access token
+                log('Testing with ACCESS token...');
+                try {
+                    const response = await fetch(EMOTE_CONFIG.apiEndpoint + '/emotion', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${accessToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    log(`Access token response: ${response.status} ${response.statusText}`);
+                    const data = await response.text();
+                    log(`Access token response data: ${data}`);
+                } catch (error) {
+                    log(`Access token test error: ${error.message}`);
+                }
+                
+                // Test with ID token
+                log('Testing with ID token...');
+                try {
+                    const response = await fetch(EMOTE_CONFIG.apiEndpoint + '/emotion', {
+                        method: 'GET',
+                        headers: {
+                            'Authorization': `Bearer ${idToken}`,
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    log(`ID token response: ${response.status} ${response.statusText}`);
+                    const data = await response.text();
+                    log(`ID token response data: ${data}`);
+                } catch (error) {
+                    log(`ID token test error: ${error.message}`);
+                }
+                
+            } catch (error) {
+                log(`Direct API test error: ${error.message}`);
+            }
+        }
+        
+        async function testEmoteViaClient() {
+            log('=== Testing Emote via API Client ===');
+            
+            try {
+                // Make sure emote client has a token
+                const accessToken = authService.getAccessToken();
+                if (accessToken) {
+                    emoteApiClient.setAuthToken(accessToken);
+                    log('Set access token on emote client');
+                }
+                
+                log('Calling emoteApiClient.getRandomEmotion()...');
+                const response = await emoteApiClient.getRandomEmotion();
+                log(`Emote client response: ${JSON.stringify(response)}`);
+                
+            } catch (error) {
+                log(`Emote client test error: ${error.message}`);
+                log(`Error stack: ${error.stack}`);
+            }
+        }
+        
+        // Initialize when page loads
+        window.addEventListener('load', () => {
+            setTimeout(checkInitialStatus, 1000);
+        });
+    </script>
+</body>
+</html>

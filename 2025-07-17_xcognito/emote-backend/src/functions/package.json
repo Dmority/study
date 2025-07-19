@@ -1,0 +1,15 @@
+{
+  "name": "emote-lambda",
+  "version": "1.0.0",
+  "description": "Lambda function for emotion generation",
+  "main": "emote.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.1490.0"
+  },
+  "keywords": ["lambda", "emotion", "serverless"],
+  "author": "",
+  "license": "ISC"
+}

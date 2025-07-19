@@ -1,0 +1,26 @@
+{
+  "httpMethod": "GET",
+  "path": "/todos",
+  "pathParameters": null,
+  "queryStringParameters": null,
+  "headers": {
+    "Accept": "application/json",
+    "Content-Type": "application/json"
+  },
+  "body": null,
+  "isBase64Encoded": false,
+  "requestContext": {
+    "authorizer": {
+      "claims": {
+        "sub": "test-user-id-123"
+      }
+    },
+    "httpMethod": "GET",
+    "path": "/todos",
+    "stage": "dev",
+    "requestId": "test-request-id",
+    "identity": {
+      "userAgent": "test-user-agent"
+    }
+  }
+}

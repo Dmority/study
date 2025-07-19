@@ -1,0 +1,193 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: 'Emote Backend - Serverless application for emotion generation'
+
+Parameters:
+  Environment:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, staging, prod]
+    Description: Environment name
+  TodoCognitoUserPoolArn:
+    Type: String
+    Default: 'arn:aws:cognito-idp:us-east-1:030878370429:userpool/us-east-1_3qvjUY9s4'
+    Description: ARN of the Todo backend Cognito User Pool for cross-service authentication
+  TodoCognitoUserPoolId:
+    Type: String
+    Default: 'us-east-1_3qvjUY9s4'
+    Description: ID of the Todo backend Cognito User Pool
+  TodoCognitoUserPoolClientId:
+    Type: String
+    Default: '125i53k4ken5kkd3bs0bg66en3'
+    Description: Client ID of the Todo backend Cognito User Pool
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 128
+    Runtime: nodejs18.x
+    Environment:
+      Variables:
+        ENVIRONMENT: !Ref Environment
+
+Resources:
+  # Cognito User Pool for Emote Service
+  EmoteCognitoUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub 'emoteuserpoool${Environment}'
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      Schema:
+        - Name: email
+          AttributeDataType: String
+          Mutable: false
+          Required: true
+      EmailConfiguration:
+        EmailSendingAccount: COGNITO_DEFAULT
+
+  # Cognito User Pool Client
+  EmoteCognitoUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref EmoteCognitoUserPool
+      ClientName: !Sub 'emoteclient${Environment}'
+      GenerateSecret: false
+      ExplicitAuthFlows:
+        - ALLOW_USER_PASSWORD_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+        - ALLOW_USER_SRP_AUTH
+      TokenValidityUnits:
+        AccessToken: minutes
+        IdToken: minutes
+        RefreshToken: days
+      AccessTokenValidity: 60
+      IdTokenValidity: 60
+      RefreshTokenValidity: 30
+      SupportedIdentityProviders:
+        - COGNITO
+        - TodoUserPoolOIDC
+      CallbackURLs:
+        - 'https://d3nlbhz9n843al.cloudfront.net/auth-callback.html'
+        - 'http://localhost:3000/auth-callback.html'
+      LogoutURLs:
+        - 'https://d3nlbhz9n843al.cloudfront.net/dashboard.html'
+        - 'http://localhost:3000/dashboard.html'
+      AllowedOAuthFlows:
+        - code
+        - implicit
+      AllowedOAuthScopes:
+        - openid
+        - profile
+        - email
+      AllowedOAuthFlowsUserPoolClient: true
+
+  # OIDC Identity Provider for Todo User Pool
+  TodoUserPoolIdentityProvider:
+    Type: AWS::Cognito::UserPoolIdentityProvider
+    Properties:
+      UserPoolId: !Ref EmoteCognitoUserPool
+      ProviderName: TodoUserPoolOIDC
+      ProviderType: OIDC
+      ProviderDetails:
+        client_id: !Ref TodoCognitoUserPoolClientId
+        attributes_request_method: GET
+        oidc_issuer: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${TodoCognitoUserPoolId}'
+        authorize_scopes: 'openid email profile'
+        authorize_url: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${TodoCognitoUserPoolId}/oauth2/authorize'
+        token_url: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${TodoCognitoUserPoolId}/oauth2/token'
+        attributes_url: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${TodoCognitoUserPoolId}/oauth2/userInfo'
+        jwks_uri: !Sub 'https://cognito-idp.${AWS::Region}.amazonaws.com/${TodoCognitoUserPoolId}/.well-known/jwks.json'
+      AttributeMapping:
+        email: email
+        name: name
+        preferred_username: sub
+
+
+  # Lambda Function for Emotion Generation
+  EmoteLambdaFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub 'emotelambda${Environment}'
+      CodeUri: ../src/functions/
+      Handler: emote.handler
+      Events:
+        EmotionApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmoteApiGateway
+            Path: /emotion
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+        EmotionsListApi:
+          Type: Api
+          Properties:
+            RestApiId: !Ref EmoteApiGateway
+            Path: /emotions
+            Method: GET
+            Auth:
+              Authorizer: CognitoAuthorizer
+
+  # API Gateway
+  EmoteApiGateway:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub 'emoteapi${Environment}'
+      StageName: !Ref Environment
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+      Auth:
+        Authorizers:
+          CognitoAuthorizer:
+            UserPoolArn: !GetAtt EmoteCognitoUserPool.Arn
+          TodoCognitoAuthorizer:
+            UserPoolArn: !Ref TodoCognitoUserPoolArn
+
+Outputs:
+  EmoteApiUrl:
+    Description: 'API Gateway endpoint URL for Emote service'
+    Value: !Sub 'https://${EmoteApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${Environment}'
+    Export:
+      Name: !Sub '${AWS::StackName}-EmoteApiUrl'
+
+  EmoteCognitoUserPoolId:
+    Description: 'Cognito User Pool ID for Emote service'
+    Value: !Ref EmoteCognitoUserPool
+    Export:
+      Name: !Sub '${AWS::StackName}-EmoteCognitoUserPoolId'
+
+  EmoteCognitoUserPoolClientId:
+    Description: 'Cognito User Pool Client ID for Emote service'
+    Value: !Ref EmoteCognitoUserPoolClient
+    Export:
+      Name: !Sub '${AWS::StackName}-EmoteCognitoUserPoolClientId'
+
+  EmoteCognitoUserPoolArn:
+    Description: 'Cognito User Pool ARN for Emote service'
+    Value: !GetAtt EmoteCognitoUserPool.Arn
+    Export:
+      Name: !Sub '${AWS::StackName}-EmoteCognitoUserPoolArn'
+
+  TodoCognitoUserPoolArn:
+    Description: 'Todo Cognito User Pool ARN used for cross-service authentication'
+    Value: !Ref TodoCognitoUserPoolArn
+    Export:
+      Name: !Sub '${AWS::StackName}-TodoCognitoUserPoolArn'
+  
+  TodoUserPoolOIDCProviderName:
+    Description: 'OIDC Provider name for Todo User Pool integration'
+    Value: TodoUserPoolOIDC
+    Export:
+      Name: !Sub '${AWS::StackName}-TodoUserPoolOIDCProviderName'

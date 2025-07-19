@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Signup</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Debug Signup Test</h2>
+        
+        <form id="testSignupForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="test@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" value="TestPassword123!" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Test Signup</button>
+        </form>
+        
+        <div id="output" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f5f5f5;">
+            <h3>Debug Output:</h3>
+            <pre id="debugOutput"></pre>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/amazon-cognito-identity-js@6.3.6/dist/amazon-cognito-identity.min.js"></script>
+    <script src="src/js/config.js"></script>
+    
+    <script>
+        const output = document.getElementById('debugOutput');
+        
+        function log(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] ${message}`;
+            if (data) {
+                output.textContent += logEntry + '\n' + JSON.stringify(data, null, 2) + '\n\n';
+            } else {
+                output.textContent += logEntry + '\n\n';
+            }
+        }
+        
+        // Test if config is loaded
+        log('Config loaded:', {
+            userPoolId: typeof AWS_CONFIG !== 'undefined' ? AWS_CONFIG.userPoolId : 'undefined',
+            clientId: typeof AWS_CONFIG !== 'undefined' ? AWS_CONFIG.userPoolClientId : 'undefined',
+            apiEndpoint: typeof AWS_CONFIG !== 'undefined' ? AWS_CONFIG.apiEndpoint : 'undefined'
+        });
+        
+        // Test if Cognito SDK is loaded
+        log('Cognito SDK loaded:', {
+            available: typeof AmazonCognitoIdentity !== 'undefined',
+            hasUserPool: typeof AmazonCognitoIdentity !== 'undefined' && !!AmazonCognitoIdentity.CognitoUserPool
+        });
+        
+        // Initialize User Pool
+        let userPool = null;
+        try {
+            if (typeof AmazonCognitoIdentity !== 'undefined' && AmazonCognitoIdentity.CognitoUserPool) {
+                userPool = new AmazonCognitoIdentity.CognitoUserPool({
+                    UserPoolId: AWS_CONFIG.userPoolId,
+                    ClientId: AWS_CONFIG.userPoolClientId
+                });
+                log('User Pool initialized successfully');
+            } else {
+                log('Failed to initialize User Pool - SDK not available');
+            }
+        } catch (error) {
+            log('Error initializing User Pool:', error.message);
+        }
+        
+        // Test signup
+        document.getElementById('testSignupForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            log('Attempting signup with:', { email, password: '***' });
+            
+            if (!userPool) {
+                log('Error: User Pool not initialized');
+                return;
+            }
+            
+            try {
+                const attributeList = [
+                    new AmazonCognitoIdentity.CognitoUserAttribute({
+                        Name: 'email',
+                        Value: email
+                    })
+                ];
+                
+                userPool.signUp(email, password, attributeList, null, (err, result) => {
+                    if (err) {
+                        log('Signup failed:', err.message);
+                        log('Error details:', err);
+                    } else {
+                        log('Signup successful:', {
+                            username: result.user.getUsername(),
+                            userConfirmed: result.userConfirmed
+                        });
+                    }
+                });
+            } catch (error) {
+                log('Exception during signup:', error.message);
+            }
+        });
+    </script>
+</body>
+</html>

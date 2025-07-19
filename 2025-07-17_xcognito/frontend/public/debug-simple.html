@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Debug</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <h2>Simple Debug Test</h2>
+        
+        <form id="testForm">
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="test@example.com" required>
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" value="TestPassword123!" required>
+            </div>
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password</label>
+                <input type="password" id="confirmPassword" name="confirmPassword" value="TestPassword123!" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Test</button>
+        </form>
+        
+        <div id="output" style="margin-top: 20px; padding: 10px; border: 1px solid #ccc; background: #f5f5f5;">
+            <h3>Debug Output:</h3>
+            <pre id="debugOutput"></pre>
+        </div>
+    </div>
+    
+    <script>
+        const output = document.getElementById('debugOutput');
+        
+        function log(message, data = null) {
+            const timestamp = new Date().toISOString();
+            const logEntry = `[${timestamp}] ${message}`;
+            if (data) {
+                output.textContent += logEntry + '\n' + JSON.stringify(data, null, 2) + '\n\n';
+            } else {
+                output.textContent += logEntry + '\n\n';
+            }
+            console.log(logEntry, data);
+        }
+        
+        document.getElementById('testForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            
+            const form = e.target;
+            log('Form:', form);
+            
+            // Test FormData
+            const formData = new FormData(form);
+            log('FormData entries:', Object.fromEntries(formData));
+            
+            // Test direct access
+            const email = form.elements.email.value;
+            const password = form.elements.password.value;
+            const confirmPassword = form.elements.confirmPassword.value;
+            
+            log('Direct access:', { email, password, confirmPassword });
+            
+            // Test form.elements
+            log('Form elements:', {
+                email: form.elements.email ? form.elements.email.value : 'NOT FOUND',
+                password: form.elements.password ? form.elements.password.value : 'NOT FOUND',
+                confirmPassword: form.elements.confirmPassword ? form.elements.confirmPassword.value : 'NOT FOUND'
+            });
+            
+            // Test querySelector
+            const emailField = form.querySelector('[name="email"]');
+            const passwordField = form.querySelector('[name="password"]');
+            const confirmPasswordField = form.querySelector('[name="confirmPassword"]');
+            
+            log('querySelector results:', {
+                email: emailField ? emailField.value : 'NOT FOUND',
+                password: passwordField ? passwordField.value : 'NOT FOUND',
+                confirmPassword: confirmPasswordField ? confirmPasswordField.value : 'NOT FOUND'
+            });
+        });
+    </script>
+</body>
+</html>
